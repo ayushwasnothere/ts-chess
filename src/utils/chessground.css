@@ -1,5 +1,5 @@
 .cg-wrap {
-  background-image: url(/board.svg);
+  background-image: url(/pieces/board.svg);
 }
 .cg-wrap piece.pawn.white {
   background-image: url("/pieces/wP.svg");
@@ -125,7 +125,6 @@ cg-board square.premove-dest:hover {
 }
 cg-board square.last-move {
   will-change: transform;
-  /* background-color: rgba(122, 95, 204, 0.5); /* #7A5FCC */
   background-color: rgba(86, 121, 193, 0.5);
 }
 cg-board square.selected {
@@ -264,8 +263,8 @@ cg-board square.selected {
 cg-board square.check {
   background: radial-gradient(
     ellipse at center,
-    rgba(212, 60, 60, 1) 0,
-    rgba(180, 30, 30, 1) 25%,
+    rgba(255, 0, 0, 1) 0,
+    rgba(231, 0, 0, 1) 25%,
     rgba(169, 0, 0, 0) 89%,
     rgba(158, 0, 0, 0) 100%
   );

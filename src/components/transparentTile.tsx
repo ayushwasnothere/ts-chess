@@ -7,10 +7,7 @@ export default function TransparentTile({
 }) {
   return (
     <div
-      className={
-        "flex justify-center items-center z-50 fixed bg-gray-950/15 w-screen h-screen backdrop-blur-[3px]" +
-        className
-      }
+      className={`flex justify-center items-center z-50 fixed bg-gray-950/15 w-screen h-screen backdrop-blur-[2px] ${className}`}
     >
       {children}
     </div>

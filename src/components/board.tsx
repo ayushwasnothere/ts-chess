@@ -6,6 +6,7 @@ import { Color, Key, MovableOptions } from "../utils/types";
 import ChessBoardUI from "./chessBoardContainer";
 import InfoBox from "./infobox";
 import { throttle } from "lodash";
+import playSound from "./sounds";
 
 interface BoardProps {
   gameMode: "ai" | "player";
@@ -15,6 +16,8 @@ interface BoardProps {
   setReset: (value: boolean) => void;
   size: number;
   mobile: boolean;
+  setShowMenu: (value: boolean) => void;
+  gameOver: [string, string, boolean];
 }
 
 export default function Board({
@@ -25,6 +28,8 @@ export default function Board({
   setReset,
   size,
   mobile,
+  gameOver,
+  setShowMenu,
 }: BoardProps) {
   const [chess] = useState(new Chess());
   const [fen, setFen] = useState(chess.fen());
@@ -39,6 +44,18 @@ export default function Board({
   const [viewonly, setViewonly] = useState(false);
   const [boardFlips, setBoardFlips] = useState(true);
   const [, setCurrent] = useState(history.length - 1);
+  const [checkmateSquares, setCheckmateSquares] = useState<string[]>([]);
+
+  const highlightSquare = (square: string, color: string) => {
+    const squareElement = document.querySelector(`[data-coord="${square}"]`);
+    if (squareElement) {
+      squareElement.style.backgroundColor = color;
+    }
+  };
+
+  useEffect(() => {
+    highlightSquare("c4", "rgba(255, 0, 0, 0.5)");
+  }, []);
 
   useEffect(() => {
     if (reset) {
@@ -108,6 +125,13 @@ export default function Board({
     }
 
     const move = chess.move({ from, to });
+    if (move.flags.includes("c")) {
+      playSound("capture");
+    } else if (move.flags.includes("k") || move.flags.includes("q")) {
+      playSound("castle");
+    } else {
+      playSound("move");
+    }
     if (move) {
       setLastMove([from, to]);
       setFen(chess.fen());
@@ -197,6 +221,7 @@ export default function Board({
 
     const move = chess.move({ from, to, promotion: piece });
     if (move) {
+      playSound("promote");
       setFen(chess.fen());
       setHistory([...history, { san: move.san, fen: chess.fen() }]);
       setTurn(chess.turn());
@@ -222,11 +247,30 @@ export default function Board({
     throttle((move: number) => {
       setFen((prevFen) => {
         if (move === history.length - 1) {
+          if (history[move].san.includes("x")) {
+            playSound("capture");
+          } else if (history[move].san.includes("-")) {
+            playSound("castle");
+          } else if (history[move].san.includes("=")) {
+            playSound("promote");
+          } else {
+            playSound("move");
+          }
           setViewonly(false);
           setLastMove(history[move]?.san ? getLastMove(move) : null);
           return chess.fen();
         }
         if (history[move]) {
+          if (history[move].san.includes("x")) {
+            playSound("capture");
+          } else if (history[move].san.includes("-")) {
+            playSound("castle");
+          } else if (history[move].san.includes("=")) {
+            playSound("promote");
+          } else {
+            playSound("move");
+          }
+
           setLastMove(history[move]?.san ? getLastMove(move) : null);
           setViewonly(true);
           calcMovable();
@@ -243,8 +287,8 @@ export default function Board({
   };
 
   return (
-    <div className="flex h-screen w-full flex-col justify-center items-center md:gap-0 md:flex-row md:items-start">
-      <div className="w-full h-screen flex justify-center items-center px-10">
+    <div className="fixed md:static top-1/4 flex h-screen w-full flex-col justify-center items-center md:gap-0 md:flex-row md:items-start">
+      <div className="w-full h-screen flex justify-center pt-10 md:pt-0 items-center md:px-10">
         <ChessBoardUI>
           <div className={`relative aspect-square w-[${size}px]`}>
             <div className="bg-white z-100 absolute w-full h-full opacity-10 pointer-events-none"></div>
@@ -261,7 +305,6 @@ export default function Board({
               style={{ borderRadius: mobile ? "" : "5px" }}
               coordinates={coordinates()}
               viewOnly={viewonly}
-              className=""
             />
             {showPromotion && (
               <div className="absolute top-1/2 left-1/2 -translate-1/2 bg-[#eee] p-2 justify-evenly rounded-sm flex flex-row gap-1 z-100 md:rounded-lg md:p-5 md:gap-10">
@@ -283,7 +326,7 @@ export default function Board({
           </div>
         </ChessBoardUI>
       </div>
-      <div className="w-full h-screen px-10 pr-30 py-20">
+      <div className="w-full h-screen md:px-10 md:pr-30 md:py-20">
         <InfoBox
           history={history}
           flip={orientation === "white" ? false : true}
@@ -319,6 +362,9 @@ export default function Board({
             });
             setFen(chess.fen());
             setViewonly(false);
+          }}
+          onClickReset={() => {
+            setShowMenu(true);
           }}
         />
       </div>

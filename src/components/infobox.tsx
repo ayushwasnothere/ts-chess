@@ -12,6 +12,7 @@ interface InfoBoxProps {
   onClickPrev: () => void;
   onClickNext: () => void;
   onClickEnd: () => void;
+  onClickReset: () => void;
 }
 export default function InfoBox({
   history,
@@ -24,15 +25,16 @@ export default function InfoBox({
   onClickPrev,
   onClickNext,
   onClickEnd,
+  onClickReset,
 }: InfoBoxProps) {
   return (
     <div
-      className={`h-full w-full rounded-xl bg-[#373855]/15 overflow-hidden hidden select-none md:flex md:flex-col ${flip ? "md:flex-col-reverse" : ""}`}
+      className={`h-full w-full md:rounded-xl md:bg-[#373855]/15 overflow-hidden select-none md:flex md:flex-col ${flip ? "md:flex-col-reverse" : ""}`}
     >
-      <div className="w-full h-1/4 bg-white/60 flex justify-start items-center gap-5 p-10">
+      <div className="w-full h-1/4 bg-white/60 hidden md:flex justify-start items-center gap-5 p-10">
         <div className="w-24 aspect-square rounded-full bg-white">
           {gameMode === "ai" ? (
-            <img src="/stockfish.webp" alt="Stockfish" />
+            <img src="/stockfish/stockfish.webp" alt="Stockfish" />
           ) : (
             <BKing />
           )}
@@ -42,39 +44,66 @@ export default function InfoBox({
         </div>
       </div>
       <div className="w-full h-2/4 flex flex-col overflow-hidden">
-        <div className="w-full flex h-10 bg-white/40 cursor-pointer">
-          <img
-            src="/flip.svg"
-            alt="next"
-            className={`w-1/5 p-2 border-r-2 border-slate-300 hover:bg-[#373855]/80 active:scale-95 transition-transform ${boardFlips ? "bg-[#373855]" : ""}`}
-            onClick={onClickFlip}
-          />
-          <img
-            src="/prev.svg"
-            alt="prev"
-            className="w-1/5 p-2 border-r border-slate-300 active:scale-95 transition-transform hover:bg-[#373855]/80"
-            onClick={onClickStart}
-          />
+        <div className="fixed md:static w-full bottom-0 left-0 flex h-15 md:h-10 bg-white/40 cursor-pointer">
           <div
-            className="w-1/5 relative overflow-hidden flex p-2 justify-center border-r border-slate-300 active:scale-95 transition-transform hover:bg-[#373855]/80"
+            className={`w-1/4 md:w-1/5 active:scale-95 transition-transform p-2 border-r border-slate-300 hover:bg-[#373855]/80 ${boardFlips ? "bg-[#373855]" : ""}`}
+          >
+            <img
+              src="/buttons/flip.svg"
+              alt="next"
+              className={`w-full h-full scale-[65%] md:scale-100`}
+              onClick={onClickFlip}
+            />
+          </div>
+          <div
+            className={`md:hidden w-1/4 md:w-1/5 active:scale-95 transition-transform p-2 border-r border-slate-300 hover:bg-[#373855]/80`}
+          >
+            <img
+              src="/buttons/reset.svg"
+              alt="prev"
+              className={`w-full h-full scale-[65%] md:scale-100`}
+              onClick={onClickReset}
+            />
+          </div>
+          <div
+            className={`hidden md:block w-1/4 md:w-1/5 active:scale-95 transition-transform p-2 border-r border-slate-300 hover:bg-[#373855]/80`}
+          >
+            <img
+              src="/buttons/prev.svg"
+              alt="prev"
+              className={`w-full h-full scale-[65%] md:scale-100`}
+              onClick={onClickStart}
+            />
+          </div>
+          <div
+            className="w-1/4 md:w-1/5 relative overflow-hidden flex p-2 justify-center border-r border-slate-300 active:scale-95 transition-transform hover:bg-[#373855]/80"
             onClick={onClickPrev}
           >
-            <img src="/start.svg" alt="forward" className="scale-200" />
+            <img
+              src="/buttons/start.svg"
+              alt="forward"
+              className="md:scale-200"
+            />
           </div>
           <div
-            className="w-1/5 relative overflow-hidden flex p-2 justify-center border-r border-slate-300 active:scale-95 transition-transform hover:bg-[#373855]/80"
+            className="w-1/4 md:w-1/5 relative overflow-hidden flex p-2 justify-center border-r border-slate-300 active:scale-95 transition-transform hover:bg-[#373855]/80"
             onClick={onClickNext}
           >
-            <img src="/end.svg" alt="rewind" className="scale-200" />
+            <img src="/buttons/end.svg" alt="rewind" className="md:scale-200" />
           </div>
-          <img
-            src="/next.svg"
-            alt="next"
-            className="w-1/5 p-2 hover:bg-[#373855]/80 active:scale-95 transition-transform"
-            onClick={onClickEnd}
-          />
+
+          <div
+            className={`hidden md:block w-1/4 md:w-1/5 active:scale-95 transition-transform p-2 border-r border-slate-300 hover:bg-[#373855]/80`}
+          >
+            <img
+              src="/buttons/next.svg"
+              alt="next"
+              onClick={onClickEnd}
+              className={`w-full h-full scale-[65%] md:scale-100`}
+            />
+          </div>
         </div>
-        <div className="w-full h-full flex flex-col overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="hidden w-full h-full md:flex flex-col overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {history
             .reduce((acc, move, index) => {
               if (index % 2 === 0) {
@@ -108,7 +137,7 @@ export default function InfoBox({
         </div>
       </div>
 
-      <div className="w-full h-1/4 bg-white/60 flex justify-start items-center gap-5 p-10">
+      <div className="hidden w-full h-1/4 bg-white/60 md:flex justify-start items-center gap-5 p-10">
         <div className="w-24 aspect-square rounded-full bg-black">
           <WK />
         </div>
