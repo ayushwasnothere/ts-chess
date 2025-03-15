@@ -27,7 +27,7 @@ export default function InfoBox({
 }: InfoBoxProps) {
   return (
     <div
-      className={`mx-10 h-full w-full rounded-xl bg-[#373855]/15 overflow-hidden hidden select-none md:flex md:flex-col ${flip ? "md:flex-col-reverse" : ""}`}
+      className={`h-full w-full rounded-xl bg-[#373855]/15 overflow-hidden hidden select-none md:flex md:flex-col ${flip ? "md:flex-col-reverse" : ""}`}
     >
       <div className="w-full h-1/4 bg-white/60 flex justify-start items-center gap-5 p-10">
         <div className="w-24 aspect-square rounded-full bg-white">
@@ -74,7 +74,7 @@ export default function InfoBox({
             onClick={onClickEnd}
           />
         </div>
-        <div className="w-full flex flex-col overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="w-full h-full flex flex-col overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {history
             .reduce((acc, move, index) => {
               if (index % 2 === 0) {

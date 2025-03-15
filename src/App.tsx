@@ -15,6 +15,34 @@ function App() {
     false,
   ]);
   const [reset, setReset] = useState(false);
+  const [size, setSize] = useState(0);
+  const [mobile, setMobile] = useState(false);
+
+  useEffect(() => {
+    const updateSize = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      if (width <= 768) {
+        setMobile(true);
+      } else {
+        setMobile(false);
+      }
+
+      const newSize =
+        width <= 768 && width < height
+          ? width
+          : width > height
+            ? (height * 80) / 100
+            : (width * 80) / 100;
+
+      setSize(newSize);
+    };
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
 
   useEffect(() => {
     if (gameOver[2]) {
@@ -27,7 +55,7 @@ function App() {
     }
   }, [reset]);
   return (
-    <>
+    <div className="h-screen w-screen">
       <Background />
       <GameMenu
         defaultSliderValue={elo}
@@ -45,7 +73,7 @@ function App() {
         gameOver={gameOver}
         setReset={setReset}
       />
-      <div className="w-screen h-screen justify-center items-center overflow-hidden flex gap-10 flex-col md:grid md:grid-cols-[1fr_4fr]">
+      <div className="fixed w-screen h-screen overflow-auto md:grid md:grid-cols-[1fr_4fr]">
         <Sidebar />
         <Board
           gameMode={gameMode}
@@ -53,9 +81,11 @@ function App() {
           setGameOver={setGameOver}
           reset={reset}
           setReset={setReset}
+          size={size}
+          mobile={mobile}
         />
       </div>
-    </>
+    </div>
   );
 }
 

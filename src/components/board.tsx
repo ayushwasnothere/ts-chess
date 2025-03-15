@@ -13,6 +13,8 @@ interface BoardProps {
   setGameOver: (value: [string, string, boolean]) => void;
   reset: boolean;
   setReset: (value: boolean) => void;
+  size: number;
+  mobile: boolean;
 }
 
 export default function Board({
@@ -21,6 +23,8 @@ export default function Board({
   setGameOver,
   reset,
   setReset,
+  size,
+  mobile,
 }: BoardProps) {
   const [chess] = useState(new Chess());
   const [fen, setFen] = useState(chess.fen());
@@ -52,7 +56,6 @@ export default function Board({
   useEffect(() => {
     if (fen === chess.fen()) {
       setViewonly(false);
-      console.log("fen changed");
     }
   }, [fen, chess]);
 
@@ -152,7 +155,7 @@ export default function Board({
     stockfish.postMessage("setoption name UCI_LimitStrength value true");
     stockfish.postMessage(`setoption name UCI_Elo value ${elo}`);
     stockfish.postMessage(`position fen ${currentFEN}`);
-    stockfish.postMessage("go depth 15");
+    stockfish.postMessage("go movetime 3000");
     stockfish.onmessage = (event) => {
       if (event.data.includes("bestmove")) {
         const bestMove = event.data.split(" ")[1];
@@ -234,95 +237,91 @@ export default function Board({
     }, 100),
     [history, chess],
   );
+  const coordinates = () => {
+    console.log(mobile);
+    return !mobile as boolean;
+  };
 
   return (
-    <div className="py-20 px-20 flex h-full w-full flex-col justify-center items-center gap-20 md:gap-0 md:flex-row md:items-start">
-      <ChessBoardUI>
-        <div
-          style={{
-            position: "relative",
-            width: `${window.innerWidth > window.innerHeight ? (window.innerHeight * 80) / 100 : (window.innerWidth * 80) / 100}px`,
-            height: `${window.innerWidth > window.innerHeight ? (window.innerHeight * 80) / 100 : (window.innerWidth * 80) / 100}px`,
+    <div className="flex h-screen w-full flex-col justify-center items-center md:gap-0 md:flex-row md:items-start">
+      <div className="w-full h-screen flex justify-center items-center px-10">
+        <ChessBoardUI>
+          <div className={`relative aspect-square w-[${size}px]`}>
+            <div className="bg-white z-100 absolute w-full h-full opacity-10 pointer-events-none"></div>
+            <Chessground
+              key={mobile ? "mobile" : "desktop"}
+              width={size}
+              height={size}
+              fen={fen}
+              onMove={onMove}
+              movable={calcMovable()}
+              lastMove={lastMove as Key[]}
+              orientation={orientation as Color}
+              turnColor={turn == "w" ? "white" : "black"}
+              style={{ borderRadius: mobile ? "" : "5px" }}
+              coordinates={coordinates()}
+              viewOnly={viewonly}
+              className=""
+            />
+            {showPromotion && (
+              <div className="absolute top-1/2 left-1/2 -translate-1/2 bg-[#eee] p-2 justify-evenly rounded-sm flex flex-row gap-1 z-100 md:rounded-lg md:p-5 md:gap-10">
+                {["q", "r", "b", "n"].map((p) => (
+                  <button
+                    key={p}
+                    className="text-lg w-[50px] aspect-square cursor-pointer bg-white flex items-center justify-center rounded-sm md:w-30 md:rounded-lg"
+                    onClick={() => promotion(p)}
+                  >
+                    <img
+                      src={`/pieces/${turn}${p.toUpperCase()}.svg`}
+                      alt={p}
+                      className="aspect-square w-[40px] md:w-20"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </ChessBoardUI>
+      </div>
+      <div className="w-full h-screen px-10 pr-30 py-20">
+        <InfoBox
+          history={history}
+          flip={orientation === "white" ? false : true}
+          gameMode={gameMode}
+          onMoveClick={goToMove}
+          boardFlips={boardFlips}
+          onClickFlip={() => setBoardFlips(!boardFlips)}
+          onClickStart={() => {
+            setCurrent(0);
+            goToMove(0);
           }}
-        >
-          <div className="bg-white z-100 absolute w-full h-full opacity-10 pointer-events-none"></div>
-          <Chessground
-            width={
-              window.innerWidth > window.innerHeight
-                ? (window.innerHeight * 80) / 100
-                : (window.innerWidth * 80) / 100
-            }
-            height={
-              window.innerWidth > window.innerHeight
-                ? (window.innerHeight * 80) / 100
-                : (window.innerWidth * 80) / 100
-            }
-            coordinates={true}
-            fen={fen}
-            onMove={onMove}
-            movable={calcMovable()}
-            lastMove={lastMove as Key[]}
-            orientation={orientation as Color}
-            turnColor={turn == "w" ? "white" : "black"}
-            style={{ borderRadius: "5px" }}
-            viewOnly={viewonly}
-          />
-          {showPromotion && (
-            <div className="absolute top-1/2 left-1/2 -translate-1/2 bg-[#eee] p-2 justify-evenly rounded-sm flex flex-row gap-1 z-100 md:rounded-lg md:p-5 md:gap-10">
-              {["q", "r", "b", "n"].map((p) => (
-                <button
-                  key={p}
-                  className="text-lg w-[50px] aspect-square cursor-pointer bg-white flex items-center justify-center rounded-sm md:w-30 md:rounded-lg"
-                  onClick={() => promotion(p)}
-                >
-                  <img
-                    src={`/pieces/${turn}${p.toUpperCase()}.svg`}
-                    alt={p}
-                    className="aspect-square w-[40px] md:w-20"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </ChessBoardUI>
-      <InfoBox
-        history={history}
-        flip={orientation === "white" ? false : true}
-        gameMode={gameMode}
-        onMoveClick={goToMove}
-        boardFlips={boardFlips}
-        onClickFlip={() => setBoardFlips(!boardFlips)}
-        onClickStart={() => {
-          setCurrent(0);
-          goToMove(0);
-        }}
-        onClickPrev={() => {
-          setCurrent((prev) => {
-            const newCurrent = Math.max(0, prev - 1);
-            goToMove(newCurrent);
-            return newCurrent;
-          });
-        }}
-        onClickNext={() => {
-          setCurrent((prev) => {
-            const newCurrent = Math.min(history.length - 1, prev + 1);
-            goToMove(newCurrent);
-            return newCurrent;
-          });
-        }}
-        onClickEnd={() => {
-          setCurrent((prev) => {
-            const lastMove = history.length - 1;
-            if (prev !== lastMove) {
-              goToMove(lastMove);
-            }
-            return lastMove;
-          });
-          setFen(chess.fen());
-          setViewonly(false);
-        }}
-      />
+          onClickPrev={() => {
+            setCurrent((prev) => {
+              const newCurrent = Math.max(0, prev - 1);
+              goToMove(newCurrent);
+              return newCurrent;
+            });
+          }}
+          onClickNext={() => {
+            setCurrent((prev) => {
+              const newCurrent = Math.min(history.length - 1, prev + 1);
+              goToMove(newCurrent);
+              return newCurrent;
+            });
+          }}
+          onClickEnd={() => {
+            setCurrent((prev) => {
+              const lastMove = history.length - 1;
+              if (prev !== lastMove) {
+                goToMove(lastMove);
+              }
+              return lastMove;
+            });
+            setFen(chess.fen());
+            setViewonly(false);
+          }}
+        />
+      </div>
     </div>
   );
 }

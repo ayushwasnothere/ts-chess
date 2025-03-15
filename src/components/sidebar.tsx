@@ -1,6 +1,6 @@
 export default function Sidebar() {
   return (
-    <div className="h-full w-full flex flex-col gap-2 bg-[#373855] items-center py-10 mix-blend-normal">
+    <div className="h-screen w-full flex flex-col gap-2 bg-[#373855] items-center py-10 mix-blend-normal">
       <img
         src="/logoW.svg"
         alt="logo"
