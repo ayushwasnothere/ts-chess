@@ -157,7 +157,7 @@ const StockFishSetting = memo(
         exit="exit"
       >
         <img
-          src="/back.svg"
+          src="/buttons/back.svg"
           alt="Back"
           className="w-8 cursor-pointer fixed z-100"
           onClick={() => {
@@ -165,7 +165,11 @@ const StockFishSetting = memo(
           }}
         />
         <div className="relative flex flex-col justify-center items-center">
-          <img src="/stockfish.webp" alt="Stockfish" className="w-30 pb-4" />
+          <img
+            src="/stockfish/stockfish.webp"
+            alt="Stockfish"
+            className="w-30 pb-4"
+          />
           <div className="font-[poppins] text-white/90 font-semibold text-2xl flex justify-center flex-col items-center gap-2">
             <div>Stockfish</div>
             <div className="text-xl">{defaultSliderValue}</div>

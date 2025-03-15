@@ -4,6 +4,7 @@ import Background from "./components/background";
 import Board from "./components/board";
 import GameMenu from "./components/gameMenu";
 import Sidebar from "./components/sidebar";
+import playSound from "./components/sounds";
 
 function App() {
   const [showMenu, setShowMenu] = useState(true);
@@ -46,7 +47,10 @@ function App() {
 
   useEffect(() => {
     if (gameOver[2]) {
-      setShowMenu(true);
+      playSound("game_end");
+      setTimeout(() => {
+        setShowMenu(true);
+      }, 2000);
     }
   }, [gameOver]);
   useEffect(() => {
@@ -74,7 +78,14 @@ function App() {
         setReset={setReset}
       />
       <div className="fixed w-screen h-screen overflow-auto md:grid md:grid-cols-[1fr_4fr]">
-        <Sidebar />
+        <Sidebar
+          onClickNewGame={() => {
+            setShowMenu(true);
+          }}
+          onClickRestart={() => {
+            setReset(true);
+          }}
+        />
         <Board
           gameMode={gameMode}
           elo={elo[0]}
@@ -83,6 +94,8 @@ function App() {
           setReset={setReset}
           size={size}
           mobile={mobile}
+          setShowMenu={setShowMenu}
+          gameOver={gameOver}
         />
       </div>
     </div>
