@@ -6,18 +6,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const http_1 = __importDefault(require("http"));
 const express_1 = __importDefault(require("express"));
 const ws_1 = require("ws");
-const fs_1 = __importDefault(require("fs"));
 const createRoom_1 = require("./utils/createRoom");
 const chess_js_1 = require("chess.js");
 const crypto_1 = require("crypto");
-const keyPath = "key.pem";
-const certPath = "cert.pem";
 let rooms = [];
-if (!fs_1.default.existsSync(keyPath) || !fs_1.default.existsSync(certPath)) {
-    console.error("❌ SSL certificates not found! Generate them using:");
-    console.error("openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes");
-    process.exit(1);
-}
 const app = (0, express_1.default)();
 app.get("/", (req, res) => {
     res.send("Running WSS");
@@ -106,6 +98,7 @@ wss.on("connection", (ws) => {
                                     message: result,
                                 }));
                             });
+                            rooms = rooms.filter((r) => r !== room);
                         }
                     }
                     catch (error) {
