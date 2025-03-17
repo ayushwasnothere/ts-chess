@@ -1,22 +1,11 @@
 import http from "http";
 import express from "express";
 import { WebSocketServer } from "ws";
-import fs from "fs";
 import { createRoom, Room } from "./utils/createRoom";
 import { Chess } from "chess.js";
 import { randomInt } from "crypto";
 
-const keyPath = "key.pem";
-const certPath = "cert.pem";
 let rooms: Room[] = [];
-
-if (!fs.existsSync(keyPath) || !fs.existsSync(certPath)) {
-  console.error("❌ SSL certificates not found! Generate them using:");
-  console.error(
-    "openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes",
-  );
-  process.exit(1);
-}
 
 const app = express();
 app.get("/", (req, res) => {
