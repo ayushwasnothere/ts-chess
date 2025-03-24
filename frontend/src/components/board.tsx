@@ -239,7 +239,7 @@ export default function Board({
     return {
       free: false,
       dests,
-      color: "both",
+      color: myColor === "" ? "both" : myColor === "w" ? "white" : "black",
     } as MovableOptions;
   };
 
