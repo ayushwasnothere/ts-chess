@@ -26,6 +26,12 @@ function App() {
   const { messages } = useWebSocket();
 
   useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/service-worker.js");
+    }
+  }, []);
+
+  useEffect(() => {
     if (messages.length === 0) return;
     const msg = messages[messages.length - 1];
     const data = JSON.parse(msg);
