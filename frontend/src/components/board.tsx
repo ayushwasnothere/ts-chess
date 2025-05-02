@@ -26,6 +26,7 @@ export default function Board({
   gameMode,
   elo,
   setGameOver,
+  gameOver,
   reset,
   setReset,
   size,
@@ -33,8 +34,9 @@ export default function Board({
   setShowMenu,
   myColor,
 }: BoardProps) {
+  const defaultFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
   const [chess] = useState(new Chess());
-  const [fen, setFen] = useState(chess.fen());
+  const [fen, setFen] = useState(defaultFen);
   const [history, setHistory] = useState<{ san: string; fen: string }[]>([]);
   const [turn, setTurn] = useState("w");
   const [aiThinking, setAiThinking] = useState(false);
@@ -45,11 +47,13 @@ export default function Board({
   const [pendingMove, setPendingMove] = useState<[string, string] | null>(null);
   const [showPromotion, setShowPromotion] = useState(false);
   const [stockfish, setStockfish] = useState<Worker>();
-  const [viewonly, setViewonly] = useState(false);
   const [boardFlips, setBoardFlips] = useState(true);
-  const [current, setCurrent] = useState(0);
+  const [now, setNow] = useState(0);
+  const [inHistory, setInHistory] = useState(false);
+  const [vo, setVo] = useState(false);
 
   const { isConnected, messages, sendMessage } = useWebSocket();
+
   useEffect(() => {
     if (messages.length === 0) return;
     const msg = messages[messages.length - 1];
@@ -78,13 +82,14 @@ export default function Board({
       setGameOver(["", "", false]);
       setReset(false);
     }
-  }, [reset, chess, setGameOver, setReset]);
+  }, [reset, chess]);
 
   useEffect(() => {
-    if (fen === history[history.length - 1]?.fen) {
-      setViewonly(false);
+    if (gameOver) {
+      chess.reset();
+      setFen(chess.fen());
     }
-  }, [fen, history]);
+  }, [gameOver, chess]);
 
   useEffect(() => {
     const engine = new Worker(
@@ -106,10 +111,10 @@ export default function Board({
   }, []);
 
   useEffect(() => {
-    if (gameMode === "ai" && turn === "b" && !aiThinking && !viewonly) {
+    if (gameMode === "ai" && turn === "b" && !aiThinking) {
       makeAIMove();
     }
-  }, [turn, gameMode, aiThinking, viewonly]);
+  }, [turn, gameMode, aiThinking]);
 
   const isValidFEN = (fen: string) => {
     try {
@@ -130,7 +135,7 @@ export default function Board({
       return;
     }
     if (stockfish === undefined) return;
-    if (gameMode === "ai" && chess.turn() === "b" && !aiThinking && !viewonly) {
+    if (gameMode === "ai" && chess.turn() === "b" && !aiThinking) {
       setAiThinking(true);
       stockfish.postMessage("uci");
       stockfish.postMessage("setoption name UCI_LimitStrength value true");
@@ -147,7 +152,87 @@ export default function Board({
     }
   };
 
+  const getHistory = (chess: Chess) => {
+    const replayChess = new Chess();
+    const replayMoves = chess.history();
+    const replayHistory = [];
+    for (const move in replayMoves) {
+      replayChess.move(replayMoves[move]);
+      replayHistory.push({
+        san: replayMoves[move],
+        fen: replayChess.fen(),
+      });
+    }
+    return replayHistory;
+  };
   const onMove = (from: string, to: string) => {
+    if (
+      inHistory &&
+      gameMode !== "online" &&
+      (gameMode === "player" || (gameMode === "ai" && chess.turn() === "w"))
+    ) {
+      const newChess = new Chess();
+      newChess.load(fen);
+      chess.reset();
+      for (let i = 0; i < now; i++) {
+        chess.move(history[i].san);
+      }
+      const hMoves = chess.moves({ square: from as Square, verbose: true });
+      if (
+        (chess.turn() === "w" && gameMode === "ai") ||
+        gameMode === "player"
+      ) {
+        for (const move of hMoves) {
+          if (move.from === from && move.to === to && move.promotion) {
+            setPendingMove([from, to]);
+            setShowPromotion(true);
+            return;
+          }
+        }
+      }
+      const hMove = chess.move({ from, to });
+      if (hMove.flags.includes("c")) {
+        playSound("capture");
+      } else if (hMove.flags.includes("k") || hMove.flags.includes("q")) {
+        playSound("castle");
+      } else {
+        playSound("move");
+      }
+      if (hMove) {
+        setLastMove([from, to]);
+        setFen(chess.fen());
+        const newHistory = getHistory(chess);
+        setHistory(newHistory);
+        setNow(newHistory.length);
+        setTurn(chess.turn());
+        setOrientation(
+          gameMode === "ai" || !boardFlips
+            ? "white"
+            : chess.turn() === "w"
+              ? "white"
+              : "black",
+        );
+        if (chess.isGameOver()) {
+          const gameStatus = chess.isCheckmate()
+            ? "Checkmate!"
+            : chess.isStalemate()
+              ? "Stalemate!"
+              : chess.isInsufficientMaterial()
+                ? "Insufficient Material Draw!"
+                : chess.isThreefoldRepetition()
+                  ? "Threefold Repetition Draw!"
+                  : chess.isDrawByFiftyMoves()
+                    ? "50-Move Draw!"
+                    : "Game Over";
+          return setGameOver([
+            gameStatus as string,
+            chess.isCheckmate() ? (chess.turn() as string) : "d",
+            true,
+          ]);
+        }
+      }
+      return;
+    }
     const moves = chess.moves({ square: from as Square, verbose: true });
 
     if (
@@ -163,7 +248,6 @@ export default function Board({
         }
       }
     }
-
     const move = chess.move({ from, to });
     if (move.flags.includes("c")) {
       playSound("capture");
@@ -175,15 +259,9 @@ export default function Board({
     if (move) {
       setLastMove([from, to]);
       setFen(chess.fen());
-      const newHistory = [
-        history.slice(
-          0,
-          gameMode === "online" ? history.length + 1 : current + 1,
-        ),
-        { san: move.san, fen: chess.fen() },
-      ].flat();
+      const newHistory = getHistory(chess);
       setHistory(newHistory);
-      setCurrent(newHistory.length);
+      setNow(newHistory.length);
       setTurn(chess.turn());
       setOrientation(
         gameMode === "online"
@@ -220,6 +298,36 @@ export default function Board({
     }
   };
   const calcMovable = () => {
+    if (inHistory) {
+      const newChess = new Chess();
+      if (now !== 0) {
+        newChess.load(history[now - 1].fen);
+      }
+      const dests = new Map();
+      newChess.board().forEach((row, rowIndex) => {
+        row.forEach((square, colIndex) => {
+          if (square) {
+            const s = `${"abcdefgh"[colIndex]}${8 - rowIndex}`;
+            const moves = newChess.moves({
+              square: s as Square,
+              verbose: true,
+            });
+
+            if (moves.length > 0) {
+              dests.set(
+                s,
+                moves.map((m) => m.to),
+              );
+            }
+          }
+        });
+      });
+      return {
+        free: false,
+        dests,
+        color: gameMode === "ai" ? "white" : "both",
+      } as MovableOptions;
+    }
     const dests = new Map();
     chess.board().forEach((row, rowIndex) => {
       row.forEach((square, colIndex) => {
@@ -239,7 +347,14 @@ export default function Board({
     return {
       free: false,
       dests,
-      color: myColor === "" ? "both" : myColor === "w" ? "white" : "black",
+      color:
+        gameMode === "ai"
+          ? "white"
+          : myColor === ""
+            ? "both"
+            : myColor === "w"
+              ? "white"
+              : "black",
     } as MovableOptions;
   };
 
@@ -251,12 +366,9 @@ export default function Board({
     if (move) {
       playSound("promote");
       setFen(chess.fen());
-      const newHistory = [
-        history.slice(0, current + 1),
-        { san: move.san, fen: chess.fen() },
-      ].flat();
+      const newHistory = getHistory(chess);
       setHistory(newHistory);
-      setCurrent(newHistory.length - 1);
+      setNow(newHistory.length);
       setTurn(chess.turn());
       setOrientation(chess.turn() === "w" ? "white" : "black");
       setLastMove([from, to]);
@@ -266,62 +378,39 @@ export default function Board({
     setPendingMove(null);
   };
 
-  const getLastMove = (index: number): [string, string] | null => {
-    const history = chess.history({ verbose: true });
-
-    if (index < 0 || index >= history.length) return null;
-
-    const moveObj = history[index];
-
-    return [moveObj.from, moveObj.to];
-  };
-
-  const goToMove = useCallback(
+  const toMove = useCallback(
     throttle((move: number) => {
-      if (aiThinking) {
-        setCurrent(history.length);
-        return;
+      if (gameMode === "online") {
+        setVo(true);
+      } else {
+        setVo(false);
       }
-      if (move == current) return;
-      if (move === history.length - 1) {
-        if (history[move].san.includes("x")) {
-          playSound("capture");
-        } else if (history[move].san.includes("-")) {
-          playSound("castle");
-        } else if (history[move].san.includes("=")) {
-          playSound("promote");
-        } else {
-          playSound("move");
-        }
-        setViewonly(false);
-        if (gameMode !== "online") {
-          chess.load(history[move].fen);
-        }
-        setLastMove(history[move]?.san ? getLastMove(move) : null);
-        setFen(history[move].fen);
-        setTurn(chess.turn());
-        return chess.fen();
+      if (move === history.length) {
+        setInHistory(false);
+        setVo(false);
+      } else {
+        setInHistory(true);
       }
-      if (history[move]) {
-        if (history[move].san.includes("x")) {
-          playSound("capture");
-        } else if (history[move].san.includes("-")) {
-          playSound("castle");
-        } else if (history[move].san.includes("=")) {
-          playSound("promote");
-        } else {
-          playSound("move");
-        }
-
-        setViewonly(true);
-        if (gameMode !== "online") chess.load(history[move].fen);
-        setLastMove(history[move]?.san ? getLastMove(move) : null);
-        setFen(history[move].fen);
-        setTurn(chess.turn());
+      if (move === 0) {
+        playSound("move");
+      } else if (history[move - 1].san.includes("x")) {
+        playSound("capture");
+      } else if (history[move - 1].san.includes("-")) {
+        playSound("castle");
+      } else if (history[move - 1].san.includes("=")) {
+        playSound("promote");
+      } else {
+        playSound("move");
+      }
+      if (move === 0) {
+        setFen(defaultFen);
+      } else {
+        setFen(history[move - 1].fen);
       }
     }, 100),
-    [history, chess, aiThinking],
+    [history, defaultFen],
   );
+
   return (
     <div className="fixed md:static top-1/4 flex h-screen w-full flex-col justify-center items-center md:gap-0 md:flex-row md:items-start">
       <div className="w-full h-screen flex justify-center pt-10 md:pt-0 items-center md:px-10">
@@ -340,6 +429,7 @@ export default function Board({
               turnColor={turn == "w" ? "white" : "black"}
               style={{ borderRadius: mobile ? "" : "5px" }}
               coordinates={!mobile}
+              viewOnly={vo}
             />
             {showPromotion && (
               <div className="absolute top-1/2 left-1/2 -translate-1/2 bg-[#eee] p-2 justify-evenly rounded-sm flex flex-row gap-1 z-100 md:rounded-lg md:p-5 md:gap-10">
@@ -366,37 +456,36 @@ export default function Board({
           history={history}
           flip={orientation === "white" ? false : true}
           gameMode={gameMode}
-          onMoveClick={goToMove}
+          onMoveClick={toMove}
+          setNow={setNow}
           boardFlips={boardFlips}
           onClickFlip={() => setBoardFlips(!boardFlips)}
           onClickStart={() => {
-            setCurrent(0);
-            goToMove(0);
+            if (history.length === 0) return;
+            setNow(0);
+            toMove(0);
           }}
           onClickPrev={() => {
-            setCurrent((prev) => {
-              const newCurrent = Math.max(0, prev - 1);
-              goToMove(newCurrent);
-              return newCurrent;
+            setNow((prev) => {
+              const currentNow = Math.max(0, prev - 1);
+              toMove(currentNow);
+              return currentNow;
             });
           }}
           onClickNext={() => {
-            setCurrent((prev) => {
-              const newCurrent = Math.min(history.length - 1, prev + 1);
-              goToMove(newCurrent);
-              return newCurrent;
+            setNow((prev) => {
+              setInHistory(true);
+              const currentNow = Math.min(history.length, prev + 1);
+              toMove(currentNow);
+              return currentNow;
             });
           }}
           onClickEnd={() => {
-            setCurrent((prev) => {
-              const lastMove = history.length - 1;
-              if (prev !== lastMove) {
-                goToMove(lastMove);
-              }
-              return lastMove;
-            });
-            setFen(chess.fen());
-            setViewonly(false);
+            if (now === history.length) return;
+            setInHistory(false);
+            setVo(false);
+            setNow(history.length);
+            toMove(history.length);
           }}
           onClickReset={() => {
             setShowMenu(true);

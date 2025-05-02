@@ -13,10 +13,12 @@ interface InfoBoxProps {
   onClickNext: () => void;
   onClickEnd: () => void;
   onClickReset: () => void;
+  setNow: (now: number) => void;
 }
 export default function InfoBox({
   history,
   flip,
+  setNow,
   gameMode,
   onMoveClick,
   boardFlips,
@@ -122,13 +124,19 @@ export default function InfoBox({
                 </div>
                 <div
                   className={`pl-8 w-full bg-gray-400/20 border-r border-b border-gray-300 font-[poppins] hover:bg-gray-400/80 py-1 ${index % 2 ? "bg-gray-400/30" : "bg-gray-400/20"}`}
-                  onClick={() => onMoveClick(index * 2)}
+                  onClick={() => {
+                    setNow(index * 2 + 1);
+                    onMoveClick(index * 2 + 1);
+                  }}
                 >
                   {pair[0]}
                 </div>
                 <div
                   className={`pl-8 w-full bg-gray-400/20 py-1 border-b border-gray-300 hover:bg-gray-400/80 font-[poppins] ${index % 2 ? "bg-gray-400/20" : "bg-gray-400/30"}`}
-                  onClick={() => onMoveClick(index * 2 + 1)}
+                  onClick={() => {
+                    setNow(index * 2 + 2);
+                    onMoveClick(index * 2 + 2);
+                  }}
                 >
                   {pair[1] || ""}
                 </div>
